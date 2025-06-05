@@ -32,16 +32,15 @@ class ViewController: UIViewController,
   }
   
   //  Called when user double-taps a kart
-  @IBAction func didDoubleTapKart(_ sender: UITapGestureRecognizer) {
-    // Exercise 1: Move the kart forward past the edge of the screen
-    // Tip: Use the `translate` function below
-    // YOUR CODE HERE
-    
-    // Exercise 6: Move the kart back to its original position after you've moved it off the screen
-    // Tip: Change your usage of the `translate` function to
-    // use the optional completion closure
-    // YOUR CODE HERE
-  }
+    @IBAction func didDoubleTapKart(_ sender: UITapGestureRecognizer) {
+        guard let kart = sender.view else { return }
+
+        // Move the kart past the right edge
+        translate(kart: kart, by: view.frame.width * 1.5) {
+            // After it's off-screen, move it back to its original position
+            self.translate(kart: kart, by: -self.view.frame.width * 1.5)
+        }
+    }
   
   private func translate(kart: UIView?,
                          by xPosition: Double,
@@ -56,11 +55,9 @@ class ViewController: UIViewController,
   }
   
   // Called when the user rotates a kart
-  @IBAction func didRotateKart(_ sender: UIRotationGestureRecognizer) {
-    // Exercise 2: Rotate the kart
-    // Tip: Use the `rotate` function below
-    // YOUR CODE HERE
-  }
+    @IBAction func didRotateKart(_ sender: UIRotationGestureRecognizer) {
+        rotate(kart: sender.view, gestureRecognizer: sender)
+    }
   
   private func rotate(kart: UIView?,
                       gestureRecognizer: UIRotationGestureRecognizer) {
@@ -70,10 +67,8 @@ class ViewController: UIViewController,
   }
   
   // Called when the user pinches a kart
-  @IBAction func didPinchKart(_ sender: UIPinchGestureRecognizer) {
-    // Exercise 3: Change the scale of the kart
-    // Tip: Use the `scale` function below
-    // YOUR CODE HERE
+    @IBAction func didPinchKart(_ sender: UIPinchGestureRecognizer) {
+        scale(kart: sender.view, gestureRecognizer: sender)
   }
   
   private func scale(kart: UIView?,
@@ -91,9 +86,19 @@ class ViewController: UIViewController,
   
   // Exercise 4: Implement the `moveKart` function to move the kart based on the
   // location of the location of the gesture in the view
-  private func moveKart(using gestureRecognizer: UIPanGestureRecognizer) {
-    // YOUR CODE HERE
-  }
+    private func moveKart(using gestureRecognizer: UIPanGestureRecognizer) {
+        guard let kart = gestureRecognizer.view else { return }
+
+        // Get the translation (movement) since the last update
+        let translation = gestureRecognizer.translation(in: kart.superview)
+
+        // Update the kart's position by adding the translation to its current center
+        kart.center = CGPoint(x: kart.center.x + translation.x,
+                              y: kart.center.y + translation.y)
+
+        // Reset the translation to zero so it’s relative for the next call
+        gestureRecognizer.setTranslation(.zero, in: kart.superview)
+    }
   
   @IBAction func didLongPressBackground(_ sender: UILongPressGestureRecognizer) {
     if sender.state == .began {
@@ -101,16 +106,34 @@ class ViewController: UIViewController,
     }
   }
   
+    @IBOutlet weak var kart1: UIImageView!
+    @IBOutlet weak var kart2: UIImageView!
+
+    // To store initial positions
+    var kart1StartCenter: CGPoint!
+    var kart2StartCenter: CGPoint!
+
   // Exercise 5: Implement `resetKarts` to reset the size and positioning of the karts
-  private func resetKarts() {
-    // YOUR CODE HERE
-  }
-  
+    private func resetKarts() {
+      UIView.animate(withDuration: 0.4) { // these changes should occur over the duration of 0.4 seconds
+        // reset the transformations for the karts to their original state
+        self.kartView0.transform = .identity
+        self.kartView1.transform = .identity
+        self.kartView2.transform = .identity
+        // reset the positions of the karts to their initial positions
+        self.kartView0.center = self.originalKartCenters[0]
+        self.kartView1.center = self.originalKartCenters[1]
+        self.kartView2.center = self.originalKartCenters[2]
+      }
+    }
   // Called whenever the view becomes visible on the screen
-  override func viewDidAppear(_ animated: Bool) {
-    super.viewDidAppear(animated)
-  }
-  
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+
+        runStartingAnimationsOneByOne {
+            self.raceKartsWithRandomizedSpeed()
+        }
+    }
   private func getKartReadyToRace(kart: UIImageView,
                                   completion: (() -> Void)? = nil) {
     UIView.animateKeyframes(
@@ -126,26 +149,41 @@ class ViewController: UIViewController,
   
   // Exercise 7: Animate all karts all at once as if they were getting ready for a race
   // Tip: Use `getKartReadyToRace`
-  private func runStartingAnimationsAllAtOnce() {
-    // YOUR CODE HERE
-  }
-  
+    private func runStartingAnimationsAllAtOnce() {
+        getKartReadyToRace(kart: kartView0)
+        getKartReadyToRace(kart: kartView1)
+        getKartReadyToRace(kart: kartView2)
+    }
   // Exercise 8: Animate all karts one-by-one
   // Tip: Use `getKartReadyToRace` and its completion closure
-  private func runStartingAnimationsOneByOne(completion: (() -> Void)? = nil) {
-    // YOUR CODE HERE
-  }
-  
+    private func runStartingAnimationsOneByOne(completion: (() -> Void)? = nil) {
+        getKartReadyToRace(kart: kartView0) { // First kart
+            self.getKartReadyToRace(kart: self.kartView1) { // Then second kart
+                self.getKartReadyToRace(kart: self.kartView2) { // Then third kart
+                    completion?() // Optional: execute a follow-up action after all karts animate
+                }
+            }
+        }
+    }
   // Exercise 9: Have the karts race all at once to the finish line!
   // Tip: Use the `translate` function above
-  private func raceKartsWithSameSpeed() {
-    // YOUR CODE HERE
-  }
+    private func raceKartsWithSameSpeed() {
+      translate(kart: kartView0, by: view.frame.width)
+      translate(kart: kartView1, by: view.frame.width)
+      translate(kart: kartView2, by: view.frame.width)
+    }
   
   // Exercise 10: Have the karts race all at once to the finish line!
   // Tip: Use the `translate` function above
-  private func raceKartsWithRandomizedSpeed() {
-    // YOUR CODE HERE
-  }
+    private func raceKartsWithRandomizedSpeed() {
+        let kartView0Speed = Double.random(in: 0.5...5.0)
+        translate(kart: kartView0, by: view.frame.width, animationDuration: kartView0Speed)
+
+        let kartView1Speed = Double.random(in: 0.5...5.0)
+        translate(kart: kartView1, by: view.frame.width, animationDuration: kartView1Speed)
+
+        let kartView2Speed = Double.random(in: 0.5...5.0)
+        translate(kart: kartView2, by: view.frame.width, animationDuration: kartView2Speed)
+    }
 }
 
